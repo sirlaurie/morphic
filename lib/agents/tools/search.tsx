@@ -1,22 +1,11 @@
-import { createStreamableUI, createStreamableValue } from 'ai/rsc'
+import { createStreamableValue } from 'ai/rsc'
 import Exa from 'exa-js'
 import { searchSchema } from '@/lib/schema/search'
 import { Card } from '@/components/ui/card'
 import { SearchSection } from '@/components/search-section'
+import { ToolProps } from '.'
 
-interface searchToolProps {
-  uiStream: ReturnType<typeof createStreamableUI>
-  fullResponse: string
-  hasError: boolean
-  isFirstToolResponse: boolean
-}
-
-export const searchTool = ({
-  uiStream,
-  fullResponse,
-  hasError,
-  isFirstToolResponse
-}: searchToolProps) => ({
+export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
   description: 'Search the web for information',
   parameters: searchSchema,
   execute: async ({
@@ -28,11 +17,7 @@ export const searchTool = ({
     max_results: number
     search_depth: 'basic' | 'advanced'
   }) => {
-    // If this is the first tool response, remove spinner
-    if (isFirstToolResponse) {
-      isFirstToolResponse = false
-      uiStream.update(null)
-    }
+    let hasError = false
     // Append the search section
     const streamResults = createStreamableValue<string>()
     uiStream.append(<SearchSection result={streamResults.value} />)
@@ -53,12 +38,9 @@ export const searchTool = ({
     }
 
     if (hasError) {
-      fullResponse += `\nAn error occurred while searching for "${query}.`
-      uiStream.update(
-        <Card className="p-4 mt-2 text-sm">
-          {`An error occurred while searching for "${query}".`}
-        </Card>
-      )
+      fullResponse = `An error occurred while searching for "${query}.`
+      uiStream.update(null)
+      streamResults.done()
       return searchResult
     }
 
